@@ -1,6 +1,6 @@
 # Proving Ground
 
-Automated home lab for security research and penetration testing practice. A Mac control machine drives Packer, Terraform, and Ansible against a dedicated Proxmox host to build reusable VM templates and spin up per-scenario lab environments.
+Automated home lab for security research and penetration testing practice. Using Packer, Terraform, and Ansible against a dedicated Proxmox host to build reusable VM templates and spin up per-scenario lab environments.
 
 ## Architecture
 
