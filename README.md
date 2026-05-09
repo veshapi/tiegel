@@ -1,11 +1,11 @@
-# Tiegel 
+# Tiegel
 
-Automated home lab for security research and penetration testing practice setup walktrough. Using Packer, Terraform, and Ansible with a dedicated Proxmox host to build reusable VM templates and spin up per-scenario lab environments.
+Automated home lab for security research and penetration testing practice setup walkthrough. Using Packer, Terraform, and Ansible with a dedicated Proxmox host to build reusable VM templates and spin up per-scenario lab environments.
 
 ## Architecture
 
 ```
-Mac (control machine)
+Local machine (control)
   ├── Packer    ──► Proxmox API (build base templates)
   ├── Terraform ──► Proxmox API (clone & provision VMs)
   └── Ansible   ──► WinRM / SSH into VMs (configure scenarios)
@@ -28,11 +28,11 @@ Each lab is defined in three places with matching names:
 
 ## End-to-end walkthrough
 
-The four phases below take you a Proxmox host with no VMs all the way to popping the `ad-null-smb` lab. Each phase has a deeper-dive doc; this section is the happy path.
+The four phases below take you from a Proxmox host with no VMs all the way to popping the `ad-null-smb` lab. Each phase has a deeper-dive doc; this section is the happy path.
 
 ### Phase 1 — Prerequisites (one-time)
 
-Install Packer, Terraform, Ansible localy, create a Proxmox API token, and store credentials in a `.env`:
+Install Packer, Terraform, Ansible locally, create a Proxmox API token, and store credentials in a `.env`:
 
 ```bash
 brew tap hashicorp/tap
@@ -40,7 +40,7 @@ brew install hashicorp/tap/packer hashicorp/tap/terraform ansible
 ansible-galaxy collection install ansible.windows community.windows microsoft.ad
 ```
 
-Create a `.env` at the repo root. (Don't forget to add it to .gitignored):
+Create a `.env` at the repo root (don't forget to add it to `.gitignore`):
 
 ```bash
 export PROXMOX_URL="https://192.168.0.245:8006/api2/json"
@@ -196,7 +196,7 @@ New labs follow the same three-place naming convention (`terraform/labs/<lab>/`,
 
 ## Requirements
 
-- Proxmox VE 8.x host on bare metal, reachable from the Mac
+- Proxmox VE 8.x host on bare metal, reachable from your local machine
 - Proxmox API token with VM clone/allocate permissions (see Phase 1)
 - 16 GB+ RAM on the Proxmox host recommended (the Windows DC needs 4 GB to promote cleanly)
-- WinRM (5985) and/or SSH reachable from the Mac to lab VMs
+- WinRM (5985) and/or SSH reachable from your local machine to lab VMs

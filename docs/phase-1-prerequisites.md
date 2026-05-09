@@ -5,7 +5,7 @@ This guide sets up the control machine to provision and configure VMs on a dedic
 ## Architecture
 
 ```
-Mac (control machine)
+Local machine (control)
   ├── Packer    ──► Proxmox API (build base templates)
   ├── Terraform ──► Proxmox API (clone & provision VMs)
   └── Ansible   ──► SSH / WinRM into VMs (configure lab scenarios)
@@ -15,7 +15,9 @@ Proxmox host: 192.168.0.245:8006
 
 ---
 
-## 1. Install Toolchain (macOS)
+## 1. Install Toolchain
+
+> Commands below use Homebrew (macOS). On Linux substitute your package manager (`apt install packer terraform ansible` on Debian/Ubuntu, etc.); on Windows use Chocolatey (`choco install packer terraform ansible`) or download the binaries from the upstream sites.
 
 ### Homebrew (prerequisite)
 

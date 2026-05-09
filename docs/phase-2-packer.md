@@ -106,7 +106,7 @@ packer build -var-file=debian-base.pkrvars.hcl .
 6. Template registered as VM ID 9001
 
 > **Important:** Packer's HTTP server must be reachable from the VM during install.
-> If your Proxmox VMs are on a different VLAN from your Mac, the preseed URL won't be
+> If your Proxmox VMs are on a different VLAN from your local machine, the preseed URL won't be
 > accessible. In that case, convert the preseed to a CD file using `additional_iso_files`
 > with `cd_files = ["./http/preseed.cfg"]` and adjust the boot command to use `file:///...`.
 
@@ -139,7 +139,7 @@ curl -sk -H "Authorization: PVEAPIToken=${PROXMOX_TOKEN_ID}=${PROXMOX_TOKEN_SECR
 |---------|-------------|-----|
 | SSH timeout / `Waiting for SSH` | Guest agent not reporting IP | VirtIO serial driver must load during setup — check `Microsoft-Windows-PnpCustomizationsWinPE` DriverPaths in `Autounattend.xml` |
 | VirtIO disk not detected | Wrong driver path in Autounattend.xml | Verify `vioserial\2k22\amd64` path exists on the VirtIO ISO |
-| Preseed not fetched (Debian) | HTTP server unreachable from VM | Check firewall on Mac; try `additional_iso_files` approach instead |
+| Preseed not fetched (Debian) | HTTP server unreachable from VM | Check firewall on the host running Packer; try `additional_iso_files` approach instead |
 | `packer init` fails | No internet access | Proxy or download the plugin manually |
 | Template already exists | Previous failed build left VM | Delete the VM manually in Proxmox, then rebuild |
 

@@ -6,7 +6,7 @@ Ansible connects to the VMs provisioned by Terraform and applies per-lab configu
 
 - Phase 3 complete — VMs running, `ansible/inventory/<lab>.ini` written by Terraform
 - Ansible installed: `pip install ansible pywinrm`
-- WinRM/SSH reachable from your Mac to the lab VMs
+- WinRM/SSH reachable from your local machine to the lab VMs
 
 ---
 
@@ -54,7 +54,7 @@ The playbook runs three roles in order:
 | `win_smb_null` | Sets `RestrictAnonymous=0`, enables null session pipes, creates anonymous `Public` share at `C:\Public` |
 | `win_loot_file` | Drops `C:\Public\credentials.txt` (creds for stage 1) and `C:\Users\Administrator\Desktop\flag.txt` (objective for stage 2) |
 
-### Verify the pwn path from your Mac
+### Verify the pwn path from your local machine
 
 Stage 1 — anonymous SMB:
 
