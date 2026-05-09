@@ -1,6 +1,6 @@
 # Phase 1 — Prerequisites & Toolchain Setup
 
-This guide sets up the control machine (your Mac) to provision and configure VMs on a dedicated Proxmox host.
+This guide sets up the control machine to provision and configure VMs on a dedicated Proxmox host.
 
 ## Architecture
 
