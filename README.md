@@ -1,6 +1,6 @@
 # Tiegel 
 
-Automated home lab for security research and penetration testing practice setup walktrough. Using Packer, Terraform, and Ansible against a dedicated Proxmox host to build reusable VM templates and spin up per-scenario lab environments.
+Automated home lab for security research and penetration testing practice setup walktrough. Using Packer, Terraform, and Ansible with a dedicated Proxmox host to build reusable VM templates and spin up per-scenario lab environments.
 
 ## Architecture
 
