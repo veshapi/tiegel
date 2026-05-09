@@ -1,0 +1,26 @@
+# Credentials - never commit
+.env
+*.tfvars
+!*.tfvars.example
+
+# Terraform state
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+
+# Packer build artifacts
+packer_cache/
+*.box
+
+# Ansible vault password files
+.vault_pass
+*.vault
+
+# macOS
+.DS_Store
+CLAUDE.md
+initial-conversation.txt
+# Packer var files (contain secrets)
+*.pkrvars.hcl
+!*.pkrvars.hcl.example

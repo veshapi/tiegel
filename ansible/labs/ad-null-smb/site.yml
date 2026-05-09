@@ -1,0 +1,13 @@
+---
+- name: Configure AD domain controller with null SMB auth
+  hosts: dc
+  gather_facts: false
+
+  vars:
+    ad_domain: lab.local
+    ad_safe_mode_password: "{{ ansible_password }}"
+
+  roles:
+    - win_ad_dc
+    - win_smb_null
+    - win_loot_file

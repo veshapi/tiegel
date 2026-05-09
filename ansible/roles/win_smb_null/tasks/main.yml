@@ -1,0 +1,170 @@
+---
+# Enables null session (anonymous) SMB access — intentional lab misconfiguration.
+
+- name: Allow anonymous enumeration of SAM accounts and shares
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa
+    name: RestrictAnonymous
+    data: 0
+    type: dword
+
+- name: Disable null session pipe/share restrictions
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa
+    name: RestrictNullSessAccess
+    data: 0
+    type: dword
+
+- name: Add IPC$ to null session shares
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters
+    name: NullSessionShares
+    data:
+      - IPC$
+    type: multistring
+
+- name: Enable anonymous access to named pipes
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters
+    name: NullSessionPipes
+    data:
+      - netlogon
+      - samr
+      - lsarpc
+      - srvsvc
+    type: multistring
+
+- name: Include anonymous users in the Everyone group
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa
+    name: EveryoneIncludesAnonymous
+    data: 1
+    type: dword
+
+- name: Create directory for anonymous share
+  ansible.windows.win_file:
+    path: C:\Public
+    state: directory
+
+- name: Grant ANONYMOUS LOGON NTFS read on C:\Public
+  ansible.windows.win_acl:
+    path: C:\Public
+    user: ANONYMOUS LOGON
+    rights: ReadAndExecute
+    inherit: ContainerInherit, ObjectInherit
+    propagation: None
+    type: allow
+    state: present
+
+- name: Grant Everyone NTFS read on C:\Public
+  ansible.windows.win_acl:
+    path: C:\Public
+    user: Everyone
+    rights: ReadAndExecute
+    inherit: ContainerInherit, ObjectInherit
+    propagation: None
+    type: allow
+    state: present
+
+- name: Create anonymous-readable SMB share
+  ansible.windows.win_share:
+    name: Public
+    path: C:\Public
+    read_access: Everyone,ANONYMOUS LOGON
+    state: present
+
+- name: Ensure ANONYMOUS LOGON has share-level read on Public
+  ansible.windows.win_shell: |
+    $acl = Get-SmbShareAccess -Name Public |
+      Where-Object { $_.AccountName -eq 'NT AUTHORITY\ANONYMOUS LOGON' -and $_.AccessRight -eq 'Read' -and $_.AccessControlType -eq 'Allow' }
+    if (-not $acl) {
+        Grant-SmbShareAccess -Name Public -AccountName 'ANONYMOUS LOGON' -AccessRight Read -Force | Out-Null
+        'changed'
+    } else { 'ok' }
+  register: anon_share_grant
+  changed_when: "'changed' in anon_share_grant.stdout"
+
+- name: Add Public to null session shares
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters
+    name: NullSessionShares
+    data:
+      - IPC$
+      - Public
+    type: multistring
+
+# Null/anonymous SMB sessions can't sign messages (no session key derived from auth).
+# Default Domain Controllers Policy enforces "Microsoft network server: Digitally sign
+# communications (always)" = Enabled, which causes tree connect to non-IPC shares to
+# fail with NT_STATUS_ACCESS_DENIED for null sessions even with correct share/NTFS ACLs.
+# Flipping the registry value alone gets reverted on the next gpupdate, so we also edit
+# GptTmpl.inf in the Default DC Policy and bump its version to make the change persist.
+- name: Disable SMB signing requirement on the DC (immediate + persistent via GPO)
+  ansible.windows.win_shell: |
+    # Immediate effect
+    $svcReg = 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters'
+    Set-ItemProperty -Path $svcReg -Name 'RequireSecuritySignature' -Type DWord -Value 0 -Force
+    Set-ItemProperty -Path $svcReg -Name 'EnableSecuritySignature'  -Type DWord -Value 1 -Force
+    Set-SmbServerConfiguration -RequireSecuritySignature $false -EnableSecuritySignature $true -Force | Out-Null
+
+    # Persistent: modify Default Domain Controllers Policy GptTmpl.inf
+    $gpoGuid    = '{6AC1786C-016F-11D2-945F-00C04fB984F9}'
+    $domain     = (Get-CimInstance Win32_ComputerSystem).Domain
+    $gptDir     = Join-Path "C:\Windows\SYSVOL\sysvol\$domain\Policies" $gpoGuid
+    $infPath    = Join-Path $gptDir 'Machine\Microsoft\Windows NT\SecEdit\GptTmpl.inf'
+    $gptIniPath = Join-Path $gptDir 'GPT.INI'
+
+    $secEditDir = Split-Path $infPath
+    if (-not (Test-Path $secEditDir)) { New-Item -Path $secEditDir -ItemType Directory -Force | Out-Null }
+
+    if (Test-Path $infPath) {
+      $inf = [System.IO.File]::ReadAllText($infPath, [System.Text.Encoding]::Unicode)
+    } else {
+      $inf = "[Unicode]`r`nUnicode=yes`r`n[Version]`r`nsignature=`"`$CHICAGO`$`"`r`nRevision=1`r`n[Registry Values]`r`n"
+    }
+
+    $key     = 'MACHINE\System\CurrentControlSet\Services\LanmanServer\Parameters\RequireSecuritySignature'
+    $desired = "$key=4,0"
+    $escaped = [regex]::Escape($key)
+    if ($inf -match "(?m)^$escaped=") {
+      $inf = [regex]::Replace($inf, "(?m)^$escaped=.*$", $desired)
+    } elseif ($inf -match '(?m)^\[Registry Values\]') {
+      $inf = [regex]::Replace($inf, '(?m)^\[Registry Values\]', "[Registry Values]`r`n$desired")
+    } else {
+      $inf += "`r`n[Registry Values]`r`n$desired`r`n"
+    }
+    [System.IO.File]::WriteAllText($infPath, $inf, [System.Text.Encoding]::Unicode)
+
+    # Bump GPT.INI version (high 16 bits = computer policy) so clients re-process the GPO
+    if (Test-Path $gptIniPath) {
+      $iniLines = Get-Content $gptIniPath
+      $verLine = $iniLines | Where-Object { $_ -match '^Version=' } | Select-Object -First 1
+      if ($verLine) {
+        $ver    = [int]($verLine -replace '^Version=', '')
+        $newVer = $ver + 65536
+        $iniLines = $iniLines | ForEach-Object { if ($_ -match '^Version=') { "Version=$newVer" } else { $_ } }
+        $iniLines | Set-Content -Path $gptIniPath
+      }
+    }
+
+    gpupdate /target:computer /force | Out-Null
+
+- name: Restart Server service to apply SMB changes
+  ansible.windows.win_shell: Restart-Service LanmanServer -Force
+
+- name: Verify SMB signing + share + ACL state
+  ansible.windows.win_shell: |
+    Write-Output '=== Get-SmbServerConfiguration (signing) ==='
+    Get-SmbServerConfiguration | Select-Object RequireSecuritySignature,EnableSecuritySignature,EnableInsecureGuestLogons | Format-List | Out-String
+    Write-Output '=== Get-SmbShareAccess -Name Public ==='
+    Get-SmbShareAccess -Name Public | Format-Table -AutoSize | Out-String
+    Write-Output '=== (Get-Acl C:\Public).Access ==='
+    (Get-Acl C:\Public).Access | Format-Table IdentityReference,FileSystemRights,AccessControlType -AutoSize | Out-String
+    Write-Output '=== NullSessionShares ==='
+    (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters' -Name NullSessionShares -ErrorAction SilentlyContinue).NullSessionShares -join ', '
+  register: smb_verify
+  changed_when: false
+
+- name: Show SMB configuration state
+  ansible.builtin.debug:
+    var: smb_verify.stdout_lines

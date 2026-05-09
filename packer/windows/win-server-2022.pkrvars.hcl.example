@@ -1,0 +1,24 @@
+# Copy to win-server-2022.pkrvars.hcl and fill in values.
+# Never commit the real file — it's in .gitignore.
+
+proxmox_url          = "https://192.168.0.245:8006/api2/json"
+proxmox_token_id     = "root@pam!automation"
+proxmox_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_node         = "pve"
+proxmox_insecure     = true
+
+# Filename of the Windows Server 2022 ISO as it appears in Proxmox storage.
+# Upload the ISO at Datacenter → pve → local → ISO Images first.
+windows_iso_file = "local:iso/SERVER_EVAL_x64FRE_en-us.iso"
+virtio_iso_file  = "local:iso/virtio-win-0.1.285.iso"  # update to match your uploaded filename
+
+vm_id     = 9000
+disk_size = "60G"
+memory_mb = 4096
+cpu_cores = 2
+
+# VM disks go on local-lvm (LVM-thin). ISOs/generated files always use "local"
+# (directory storage) — this is hardcoded in the template and not overridable here.
+storage = "local-lvm"
+
+winrm_password = "Pr0vingGr0und!"

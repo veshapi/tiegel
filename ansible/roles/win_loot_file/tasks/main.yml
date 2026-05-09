@@ -1,0 +1,13 @@
+---
+- name: Drop credentials file on the anonymous share
+  ansible.windows.win_copy:
+    content: |
+      Domain:   {{ ad_domain }}
+      Username: Administrator
+      Password: {{ ansible_password }}
+    dest: C:\Public\credentials.txt
+
+- name: Drop flag on Administrator desktop
+  ansible.windows.win_copy:
+    content: "PG{null_smb_gives_you_wings}\n"
+    dest: C:\Users\Administrator\Desktop\flag.txt

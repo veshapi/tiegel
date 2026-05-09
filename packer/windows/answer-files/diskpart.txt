@@ -1,0 +1,9 @@
+select disk 0
+clean
+convert mbr
+create partition primary
+select partition 1
+active
+format quick fs=ntfs label="Windows"
+assign letter=C
+exit

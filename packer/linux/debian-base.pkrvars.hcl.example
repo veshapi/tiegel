@@ -1,0 +1,19 @@
+# Copy to debian-base.pkrvars.hcl and fill in values.
+# Never commit the real file — it's in .gitignore.
+# Download the ISO directly on Proxmox before running packer build:
+#   wget -O /var/lib/vz/template/iso/debian-13.4.0-amd64-netinst.iso \
+#     https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.4.0-amd64-netinst.iso
+
+proxmox_url          = "https://192.168.0.245:8006/api2/json"
+proxmox_token_id     = "root@pam!automation"
+proxmox_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_node         = "pve"
+proxmox_insecure     = true
+
+vm_id     = 9001
+disk_size = "20G"
+memory_mb = 1024
+cpu_cores = 1
+storage   = "local-lvm"
+
+ssh_password = "packer"

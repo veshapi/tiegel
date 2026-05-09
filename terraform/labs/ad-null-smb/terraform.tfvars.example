@@ -1,0 +1,6 @@
+proxmox_url          = "https://192.168.0.245:8006/api2/json"
+proxmox_token_id     = "root@pam!automation"
+proxmox_token_secret = "your-token-secret-here"
+proxmox_node         = "pve"
+proxmox_insecure     = true
+storage              = "local-lvm"

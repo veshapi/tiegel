@@ -1,0 +1,27 @@
+---
+- name: Install AD DS and management tools
+  ansible.windows.win_feature:
+    name:
+      - AD-Domain-Services
+      - RSAT-AD-Tools
+      - RSAT-DNS-Server
+    include_management_tools: true
+    state: present
+
+- name: Promote to domain controller
+  microsoft.ad.domain:
+    dns_domain_name: "{{ ad_domain }}"
+    safe_mode_password: "{{ ad_safe_mode_password }}"
+    reboot: false
+  register: ad_promotion
+
+- name: Reboot to complete promotion
+  ansible.windows.win_reboot:
+    reboot_timeout: 600
+    post_reboot_delay: 30
+  when: ad_promotion.reboot_required
+
+- name: Wait for AD web services to be ready
+  ansible.windows.win_service:
+    name: ADWS
+    state: started
